@@ -1,7 +1,6 @@
 package zinnet
 
 import (
-	"errors"
 	"fmt"
 	"net"
 
@@ -18,22 +17,24 @@ type Server struct {
 	IP string
 	//port 监听的端口
 	Port int
+	//路由功能、server注册的conn
+	router zinterface.IRouter
 }
 
 // 定义计数器
 var cnt uint32
 
-// conn 需要的操作函数、定义为当前客户端发起conn的绑定函数
-func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
-	//回显业务
-	fmt.Println("[Conn Handle] CallBackClient...")
-	_, err := conn.Write(data)
-	if err != nil {
-		fmt.Println("write back data err", err)
-		return errors.New("CallBackClient error")
-	}
-	return nil
-}
+// // conn 需要的操作函数、定义为当前客户端发起conn的绑定函数
+// func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
+// 	//回显业务
+// 	fmt.Println("[Conn Handle] CallBackClient...")
+// 	_, err := conn.Write(data)
+// 	if err != nil {
+// 		fmt.Println("write back data err", err)
+// 		return errors.New("CallBackClient error")
+// 	}
+// 	return nil
+// }
 
 // 初始化Server对象
 func NewServer() zinterface.IServer {
@@ -42,6 +43,7 @@ func NewServer() zinterface.IServer {
 		IPVersion: "tcp4",
 		IP:        "0.0.0.0",
 		Port:      8080,
+		router:    nil,
 	}
 	return s
 }
@@ -96,10 +98,9 @@ func (s *Server) Start() {
 			// 	}
 			// }()
 			//利用conn方法重构回显业务
-			conn := NewConn(TCPconn, cnt, CallBackToClient)
+			conn := NewConn(TCPconn, cnt, s.router)
 			//计数器+1
 			cnt++
-
 			go conn.Start()
 		}
 
@@ -120,4 +121,10 @@ func (s *Server) Serve() {
 	//堵塞
 	select {}
 
+}
+
+// server 注册 路由
+func (s *Server) AddRouter(router zinterface.IRouter) {
+	s.router = router
+	fmt.Println("Add router to conn success!")
 }

@@ -15,10 +15,12 @@ type Connection struct {
 	ConnID uint32
 	//链接状态
 	IsCloesd bool
-	//当前链接绑定业务处理方法
-	handleAPI zinterface.HandleFunc
+	// //当前链接绑定业务处理方法
+	// handleAPI zinterface.HandleFunc
 	//告知当前链接状态的channel
 	ExitChan chan bool
+	//router的进行处理conn的方法
+	router zinterface.IRouter
 }
 
 func (c *Connection) StartRead() {
@@ -29,18 +31,25 @@ func (c *Connection) StartRead() {
 		//读取
 		buf := make([]byte, 512)
 		//堵塞
-		cnt, err := c.conn.Read(buf)
+		_, err := c.conn.Read(buf)
 		//读取异常、跳出本次循环
 		if err != nil {
 			fmt.Println("conn id ", c.ConnID, "reading err : \n", err)
 			continue
 		}
-		//conn绑定的业务
-		if err := c.handleAPI(c.conn, buf, cnt); err != nil {
-			fmt.Println("conn id : ", c.ConnID, "handle is error : \n", err)
-			return
-		}
 
+		// //conn绑定的业务
+		// if err := c.handleAPI(c.conn, buf, cnt); err != nil {
+		// 	fmt.Println("conn id : ", c.ConnID, "handle is error : \n", err)
+		// 	return
+		// }
+
+		//执行注册的路由方法
+		go func() {
+			c.router.Handle(NewRequest(c, buf))
+			c.router.PreHandle(NewRequest(c, buf))
+			c.router.PostHandle(NewRequest(c, buf))
+		}()
 	}
 }
 
@@ -92,13 +101,14 @@ func (c *Connection) Send(data []byte) error {
 }
 
 // 实例化对象conn、初始化模块的方法,向外暴露接口
-func NewConn(conn *net.TCPConn, connId uint32, api zinterface.HandleFunc) zinterface.Iconn {
+func NewConn(conn *net.TCPConn, connId uint32, router zinterface.IRouter) zinterface.Iconn {
 	c := &Connection{
-		conn:      conn,
-		ConnID:    connId,
-		handleAPI: api,
-		IsCloesd:  false,
-		ExitChan:  make(chan bool, 1),
+		conn:   conn,
+		ConnID: connId,
+		// handleAPI: api,
+		IsCloesd: false,
+		ExitChan: make(chan bool, 1),
+		router:   router,
 	}
 	return c
 }

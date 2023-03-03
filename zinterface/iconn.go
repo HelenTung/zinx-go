@@ -17,5 +17,5 @@ type Iconn interface {
 	Send(data []byte) error
 }
 
-// 处理链接业务的方法
-type HandleFunc func(*net.TCPConn, []byte, int) error
+//// 处理链接业务的方法
+// type HandleFunc func(*net.TCPConn, []byte, int) error
