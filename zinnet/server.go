@@ -1,6 +1,7 @@
 package zinnet
 
 import (
+	"errors"
 	"fmt"
 	"net"
 
@@ -17,6 +18,21 @@ type Server struct {
 	IP string
 	//port 监听的端口
 	Port int
+}
+
+// 定义计数器
+var cnt uint32
+
+// conn 需要的操作函数、定义为当前客户端发起conn的绑定函数
+func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
+	//回显业务
+	fmt.Println("[Conn Handle] CallBackClient...")
+	_, err := conn.Write(data)
+	if err != nil {
+		fmt.Println("write back data err", err)
+		return errors.New("CallBackClient error")
+	}
+	return nil
 }
 
 // 初始化Server对象
@@ -48,35 +64,45 @@ func (s *Server) Start() {
 			return
 		}
 		fmt.Println("start zinx server success,", s.Name, "success,listenning...")
+
+		cnt = 0
 		//阻塞等待client连接、处理客户端业务（读写）
 		for {
+			//堵塞，等待客户端链接、如果客户端有链接、则堵塞返回
 			TCPconn, err := listenner.AcceptTCP()
 			if err != nil {
 				fmt.Println("listenner.AcceptTCP error : ", err)
 				continue
 			}
 
-			// 与client已经建立连接、进行业务处理、处理512byte的回显业务
+			// // 与client已经建立连接、进行业务处理、处理512byte的回显业务
 
-			go func() {
-				for {
-					//read
-					buff := make([]byte, 512)
-					//堵塞、等待数据到达
-					cnt, err := TCPconn.Read(buff)
-					if err != nil {
-						fmt.Println("TCPconn.Read error :", err)
-						continue
-					}
-					//write、回显业务
-					if _, err := TCPconn.Write(buff[:cnt]); err != nil {
-						fmt.Println("write back buff err : ", err)
-						continue
-					}
+			// go func() {
+			// 	for {
+			// 		//read
+			// 		buff := make([]byte, 512)
+			// 		//堵塞、等待数据到达
+			// 		cnt, err := TCPconn.Read(buff)
+			// 		if err != nil {
+			// 			fmt.Println("TCPconn.Read error :", err)
+			// 			continue
+			// 		}
+			// 		//write、回显业务
+			// 		if _, err := TCPconn.Write(buff[:cnt]); err != nil {
+			// 			fmt.Println("write back buff err : ", err)
+			// 			continue
+			// 		}
 
-				}
-			}()
+			// 	}
+			// }()
+			//利用conn方法重构回显业务
+			conn := NewConn(TCPconn, cnt, CallBackToClient)
+			//计数器+1
+			cnt++
+
+			go conn.Start()
 		}
+
 	}()
 }
 
