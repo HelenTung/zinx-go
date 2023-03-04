@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/helenvivi/zinx/utils"
 	"github.com/helenvivi/zinx/zinterface"
 )
 
@@ -29,7 +30,7 @@ func (c *Connection) StartRead() {
 	defer c.Stop()
 	for {
 		//读取
-		buf := make([]byte, 512)
+		buf := make([]byte, utils.Globa.MaxPackageSize)
 		//堵塞
 		_, err := c.conn.Read(buf)
 		//读取异常、跳出本次循环

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/helenvivi/zinx/utils"
 	"github.com/helenvivi/zinx/zinterface"
 )
 
@@ -39,10 +40,10 @@ var cnt uint32
 // 初始化Server对象
 func NewServer() zinterface.IServer {
 	s := &Server{
-		Name:      "name",
+		Name:      utils.Globa.Name,
 		IPVersion: "tcp4",
-		IP:        "0.0.0.0",
-		Port:      8080,
+		IP:        utils.Globa.Host,
+		Port:      utils.Globa.TcpPort,
 		router:    nil,
 	}
 	return s
@@ -50,7 +51,10 @@ func NewServer() zinterface.IServer {
 
 // 启动
 func (s *Server) Start() {
-	fmt.Printf("[Start] Server listenner at IP : %s,Port : %d,is starting\n", s.IP, s.Port)
+	fmt.Printf("[Zinx] Server Name : %s,listenner at ip : %s,Port : %d is starting\n",
+		utils.Globa.Name, utils.Globa.Host, utils.Globa.TcpPort)
+	fmt.Printf("[Zinx] Version : %s, MaxConn : %d, MaxPackSize : %d \n",
+		utils.Globa.Version, utils.Globa.MaxConn, utils.Globa.MaxPackageSize)
 	//放到携程处理、避免因为读取数据堵塞
 	go func() {
 		//获取tcp addr
