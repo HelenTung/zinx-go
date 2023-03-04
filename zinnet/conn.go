@@ -1,10 +1,11 @@
 package zinnet
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"net"
 
-	"github.com/helenvivi/zinx/utils"
 	"github.com/helenvivi/zinx/zinterface"
 )
 
@@ -30,26 +31,56 @@ func (c *Connection) StartRead() {
 	defer c.Stop()
 	for {
 		//读取
-		buf := make([]byte, utils.Globa.MaxPackageSize)
-		//堵塞
-		_, err := c.conn.Read(buf)
-		//读取异常、跳出本次循环
-		if err != nil {
-			fmt.Println("conn id ", c.ConnID, "reading err : \n", err)
-			continue
-		}
+		// buf := make([]byte, utils.Globa.MaxPackageSize)
+		// //堵塞
+		// _, err := c.conn.Read(buf)
+		// //读取异常、跳出本次循环
+		// if err != nil {
+		// 	fmt.Println("conn id ", c.ConnID, "reading err : \n", err)
+		// 	continue
+		// }
 
 		// //conn绑定的业务
 		// if err := c.handleAPI(c.conn, buf, cnt); err != nil {
 		// 	fmt.Println("conn id : ", c.ConnID, "handle is error : \n", err)
 		// 	return
 		// }
+		//
+		//建立一个dp拆包对象
+		dp := NewData()
 
+		//建立二进制msg head
+		DataHead := make([]byte, dp.GetHeadlen())
+		//读取客户端conn的msg Head
+		_, err := io.ReadFull(c.GetTcpConn(), DataHead)
+		if err != nil {
+			fmt.Println("read msg head error", err)
+			break
+		}
+		//使用dp拆包
+		msghead, err := dp.UnPackMsg(DataHead)
+		if err != nil {
+			fmt.Println("Server msg Unpack error", err)
+			break
+		}
+		// 转换对象，将接口转换为实例对象
+		msg := msghead.(*Message)
+		//判断msg有无数据、若有则进行数据包的拆包
+		if msg.GetMessageLen() > 0 {
+			//开辟 Data空间
+			msg.Date = make([]byte, msg.GetMessageLen())
+			//从流中读取剩余的data
+			_, err := io.ReadFull(c.GetTcpConn(), msg.Date)
+			if err != nil {
+				fmt.Println("read msg data error", err)
+				break
+			}
+		}
 		//执行注册的路由方法
 		go func() {
-			c.router.Handle(NewRequest(c, buf))
-			c.router.PreHandle(NewRequest(c, buf))
-			c.router.PostHandle(NewRequest(c, buf))
+			c.router.Handle(NewRequest(c, msg))
+			c.router.PreHandle(NewRequest(c, msg))
+			c.router.PostHandle(NewRequest(c, msg))
 		}()
 	}
 }
@@ -91,12 +122,21 @@ func (c *Connection) RemoteAddr() net.Addr {
 }
 
 // 发送数据
-func (c *Connection) Send(data []byte) error {
-	fmt.Println("conn send()...connid = ", c.ConnID)
-	_, err := c.conn.Write(data)
+func (c *Connection) Send(msgId uint32, data []byte) error {
+	if c.IsCloesd {
+		return errors.New("conn is closed when send msg")
+	}
+	//定义封包对象
+	dp := NewData()
+	//封装
+	buf, err := dp.PackMsg(NewMsg(msgId, data))
 	if err != nil {
-		fmt.Println("conn id ", c.ConnID, "conn write err ", err)
-		return err
+		return errors.New("pack error msg")
+	}
+	//发送
+	if _, err := c.conn.Write(buf); err != nil {
+		println("Write msg error,Msg ID:", msgId, "error:", err)
+		return errors.New("conn write msg error")
 	}
 	return nil
 }
