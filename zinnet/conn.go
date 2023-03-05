@@ -19,36 +19,22 @@ type Connection struct {
 	IsCloesd bool
 	// //当前链接绑定业务处理方法
 	// handleAPI zinterface.HandleFunc
-	//告知当前链接状态的channel
+	//告知当前链接状态的channel、reader --> writer
 	ExitChan chan bool
 	// //router的进行处理conn的方法
 	// router zinterface.IRouter
-
+	//无缓冲channel、用在writer reader发送信息
+	MessChan chan []byte
 	//消息管理模块
 	MessageHandler zinterface.IMsgHandler
 }
 
+// read模块
 func (c *Connection) StartRead() {
-	fmt.Println("StartRead goroutine is running")
-	defer fmt.Println("connid ", c.ConnID, "reader goroutine is running!", c.RemoteAddr().String())
+	fmt.Println("[StartRead goroutine is running]")
+	defer fmt.Println("[Writer Conn Exit!]", "Connid ", c.ConnID, "C Addr ", c.RemoteAddr().String())
 	defer c.Stop()
 	for {
-		//读取
-		// buf := make([]byte, utils.Globa.MaxPackageSize)
-		// //堵塞
-		// _, err := c.conn.Read(buf)
-		// //读取异常、跳出本次循环
-		// if err != nil {
-		// 	fmt.Println("conn id ", c.ConnID, "reading err : \n", err)
-		// 	continue
-		// }
-
-		// //conn绑定的业务
-		// if err := c.handleAPI(c.conn, buf, cnt); err != nil {
-		// 	fmt.Println("conn id : ", c.ConnID, "handle is error : \n", err)
-		// 	return
-		// }
-		//
 		//建立一个dp拆包对象
 		dp := NewData()
 
@@ -84,25 +70,53 @@ func (c *Connection) StartRead() {
 	}
 }
 
+// write 模块
+func (c *Connection) StartWrite() {
+	fmt.Println("StartWrite goroutine is running")
+	defer fmt.Println("[Writer Conn Exit!]", "Connid ", c.ConnID, "C Addr ", c.RemoteAddr().String())
+
+	//堵塞等待msgchan
+	for {
+		select {
+		case date := <-c.MessChan:
+			//msgchan到达
+			if _, err := c.conn.Write(date); err != nil {
+				fmt.Println("Send data error!")
+				return
+			}
+			//exitchan到达
+		case <-c.ExitChan:
+			return
+		}
+
+	}
+}
+
 // start conn、启动链接、让连接开始工作
 func (c *Connection) Start() {
 	fmt.Println("conn start()...connid = ", c.ConnID)
 
-	//启动当前链接的读写
+	//启动当前链接的读
 	go c.StartRead()
+	//启动当前链接的写
+	go c.StartWrite()
 }
 
 // stop conn、停止链接、结束当前连接的工作
 func (c *Connection) Stop() {
-	fmt.Println("conn stop()...connid = ", c.ConnID)
+	fmt.Println("[Conn stop()...]connid = ", c.ConnID)
 	if c.IsCloesd {
 		return
 	}
 	c.IsCloesd = true
 	//关闭socket链接
 	c.conn.Close()
-	//关闭channel
+	//告知writer exitchan关闭
+	c.ExitChan <- true
+	//关闭channel、回收资源
 	close(c.ExitChan)
+	close(c.MessChan)
+
 }
 
 // 获取当前链接的绑定socket 套接字
@@ -132,11 +146,8 @@ func (c *Connection) Send(msgId uint32, data []byte) error {
 	if err != nil {
 		return errors.New("pack error msg")
 	}
-	//发送
-	if _, err := c.conn.Write(buf); err != nil {
-		println("Write msg error,Msg ID:", msgId, "error:", err)
-		return errors.New("conn write msg error")
-	}
+	//发送数据给管道
+	c.MessChan <- buf
 	return nil
 }
 
@@ -148,6 +159,7 @@ func NewConn(conn *net.TCPConn, connId uint32, mh zinterface.IMsgHandler) zinter
 		// handleAPI: api,
 		IsCloesd:       false,
 		ExitChan:       make(chan bool, 1),
+		MessChan:       make(chan []byte),
 		MessageHandler: mh,
 	}
 	return c
