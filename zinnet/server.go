@@ -18,8 +18,10 @@ type Server struct {
 	IP string
 	//port 监听的端口
 	Port int
-	//路由功能、server注册的conn
-	router zinterface.IRouter
+	// //路由功能、server注册的conn
+	// router     zinterface.IRouter
+	//server 的消息管理模块
+	MsgHandler zinterface.IMsgHandler
 }
 
 // 定义计数器
@@ -40,11 +42,11 @@ var cnt uint32
 // 初始化Server对象
 func NewServer() zinterface.IServer {
 	s := &Server{
-		Name:      utils.Globa.Name,
-		IPVersion: "tcp4",
-		IP:        utils.Globa.Host,
-		Port:      utils.Globa.TcpPort,
-		router:    nil,
+		Name:       utils.Globa.Name,
+		IPVersion:  "tcp4",
+		IP:         utils.Globa.Host,
+		Port:       utils.Globa.TcpPort,
+		MsgHandler: NewMessageHandler(),
 	}
 	return s
 }
@@ -101,8 +103,8 @@ func (s *Server) Start() {
 
 			// 	}
 			// }()
-			//利用conn方法重构回显业务
-			conn := NewConn(TCPconn, cnt, s.router)
+			//将处理新链接的方法与conn进行绑定、得到新的conn模块
+			conn := NewConn(TCPconn, cnt, s.MsgHandler)
 			//计数器+1
 			cnt++
 			go conn.Start()
@@ -128,7 +130,7 @@ func (s *Server) Serve() {
 }
 
 // server 注册 路由
-func (s *Server) AddRouter(router zinterface.IRouter) {
-	s.router = router
+func (s *Server) AddRouter(msgID uint32, router zinterface.IRouter) {
+	s.MsgHandler.AddRouter(msgID, router)
 	fmt.Println("Add router to conn success!")
 }

@@ -1,0 +1,9 @@
+{
+  "TcpServer": null,
+  "Name": "zinx v6.0",
+  "Host": "127.0.0.1",
+  "TcpPort": 7070,
+  "Version": "v6.0",
+  "MaxConn": 10,
+  "MaxPackageSize": 4096
+}

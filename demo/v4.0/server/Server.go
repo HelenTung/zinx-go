@@ -43,7 +43,7 @@ func (r *PingRouter) PostHandle(req zinterface.IRequest) {
 func main() {
 	//实例化server
 	s := zinnet.NewServer()
-	s.AddRouter(&PingRouter{})
+	s.AddRouter(1, &PingRouter{})
 	//启动server
 	s.Serve()
 }

@@ -46,7 +46,7 @@ func init() {
 	//zinx.json没有初始化、默认加载值
 	Globa = &GlobaObj{
 		Name:           "zinx",
-		Version:        "V4.0",
+		Version:        "V0.0",
 		TcpPort:        8080,
 		Host:           "0.0.0.0",
 		MaxConn:        1000,

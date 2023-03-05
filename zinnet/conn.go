@@ -21,8 +21,11 @@ type Connection struct {
 	// handleAPI zinterface.HandleFunc
 	//告知当前链接状态的channel
 	ExitChan chan bool
-	//router的进行处理conn的方法
-	router zinterface.IRouter
+	// //router的进行处理conn的方法
+	// router zinterface.IRouter
+
+	//消息管理模块
+	MessageHandler zinterface.IMsgHandler
 }
 
 func (c *Connection) StartRead() {
@@ -77,11 +80,7 @@ func (c *Connection) StartRead() {
 			}
 		}
 		//执行注册的路由方法
-		go func() {
-			c.router.Handle(NewRequest(c, msg))
-			c.router.PreHandle(NewRequest(c, msg))
-			c.router.PostHandle(NewRequest(c, msg))
-		}()
+		go c.MessageHandler.DoMsgHandler(NewRequest(c, msg))
 	}
 }
 
@@ -142,14 +141,14 @@ func (c *Connection) Send(msgId uint32, data []byte) error {
 }
 
 // 实例化对象conn、初始化模块的方法,向外暴露接口
-func NewConn(conn *net.TCPConn, connId uint32, router zinterface.IRouter) zinterface.Iconn {
+func NewConn(conn *net.TCPConn, connId uint32, mh zinterface.IMsgHandler) zinterface.Iconn {
 	c := &Connection{
 		conn:   conn,
 		ConnID: connId,
 		// handleAPI: api,
-		IsCloesd: false,
-		ExitChan: make(chan bool, 1),
-		router:   router,
+		IsCloesd:       false,
+		ExitChan:       make(chan bool, 1),
+		MessageHandler: mh,
 	}
 	return c
 }

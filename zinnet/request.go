@@ -4,7 +4,7 @@ import (
 	"github.com/helenvivi/zinx/zinterface"
 )
 
-// 将conn 和 data绑定起来形成一个完整的对象
+// 将conn 和 msg 绑定起来形成一个完整的对象
 type Request struct {
 	//客户端建立好的链接
 	conn zinterface.Iconn
