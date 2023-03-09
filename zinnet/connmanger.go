@@ -19,7 +19,7 @@ func (cm *ConnManger) DeleteConn(conn zinterface.Iconn) {
 	defer cm.connLock.Unlock()
 	//删除
 	delete(cm.connections, conn.GetConnID())
-	fmt.Println("Delete ConnID ", conn.GetConnID())
+	fmt.Println("Delete ConnID ", conn.GetConnID(), "Conn Len\n", cm.GetConnNum())
 }
 
 // 添加链接
@@ -30,15 +30,15 @@ func (cm *ConnManger) AddteConn(conn zinterface.Iconn) {
 
 	//加入
 	cm.connections[conn.GetConnID()] = conn
-	fmt.Println("Add ConnID ", conn.GetConnID())
+	fmt.Println("Add ConnID ", conn.GetConnID(), "Conn Len\n", cm.GetConnNum())
 }
 
 // connid ——> 获取conn
 func (cm *ConnManger) GetConn(ConnID uint32) (zinterface.Iconn, error) {
-	cm.connLock.Lock()
-	defer cm.connLock.Unlock()
+	cm.connLock.RLock()
+	defer cm.connLock.RUnlock()
 	if conn, ok := cm.connections[ConnID]; ok {
-		fmt.Println("ConnID ", conn.GetConnID())
+		fmt.Println("ConnID: ", conn.GetConnID())
 		return conn, nil
 	} else {
 		return nil, errors.New("connection NOT FOUND")
@@ -60,14 +60,13 @@ func (cm *ConnManger) ClearConn() {
 		v.Stop()
 		//delete
 		delete(cm.connections, k)
-		fmt.Println("Clear All connection!")
-
 	}
+	fmt.Println("Clear All connection!")
+
 }
 
 func NewConnManger() zinterface.IConnManger {
 	return &ConnManger{
 		connections: make(map[uint32]zinterface.Iconn),
-		connLock:    sync.RWMutex{},
 	}
 }

@@ -12,4 +12,6 @@ type IServer interface {
 	AddRouter(msgID uint32, router IRouter)
 	//获取mgr
 	GetConnMgr() IConnManger
+	//获取hook
+	GetHook() Ihook
 }

@@ -92,7 +92,8 @@ func (c *Connection) StartWrite() {
 		select {
 		case date := <-c.MessChan:
 			//msgchan到达
-			if _, err := c.conn.Write(date); err != nil {
+			_, err := c.conn.Write(date)
+			if err != nil {
 				fmt.Println("Send data error!")
 				return
 			}
@@ -112,6 +113,9 @@ func (c *Connection) Start() {
 	go c.StartRead()
 	//启动当前链接的写
 	go c.StartWrite()
+
+	//执行服务端对应应答
+	c.ConnServer.GetHook().CallOnConnStart(c)
 }
 
 // stop conn、停止链接、结束当前连接的工作
@@ -121,6 +125,9 @@ func (c *Connection) Stop() {
 		return
 	}
 	c.IsCloesd = true
+	//执行服务端对应应答
+	c.ConnServer.GetHook().CallOnConnStop(c)
+
 	//关闭socket链接
 	c.conn.Close()
 	//告知writer exitchan关闭
@@ -128,6 +135,7 @@ func (c *Connection) Stop() {
 
 	//删除当前链接
 	c.ConnServer.GetConnMgr().DeleteConn(c)
+
 	//关闭channel、回收资源
 	close(c.ExitChan)
 	close(c.MessChan)

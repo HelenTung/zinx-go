@@ -22,6 +22,8 @@ type Server struct {
 	MsgHandler zinterface.IMsgHandler
 	//connection manger
 	ConnMgr zinterface.IConnManger
+	//定义服务端处理客户端业务的方法
+	HookServer zinterface.Ihook
 }
 
 // 定义计数器
@@ -36,6 +38,7 @@ func NewServer() zinterface.IServer {
 		Port:       utils.Globa.TcpPort,
 		MsgHandler: NewMessageHandler(),
 		ConnMgr:    NewConnManger(),
+		HookServer: NewHook(),
 	}
 	return s
 }
@@ -108,7 +111,6 @@ func (s *Server) Serve() {
 
 	//堵塞
 	select {}
-
 }
 
 // server 注册 路由
@@ -119,4 +121,8 @@ func (s *Server) AddRouter(msgID uint32, router zinterface.IRouter) {
 
 func (s *Server) GetConnMgr() zinterface.IConnManger {
 	return s.ConnMgr
+}
+
+func (s *Server) GetHook() zinterface.Ihook {
+	return s.HookServer
 }

@@ -45,7 +45,7 @@ func NewMessageHandler() zinterface.IMsgHandler {
 	return &MessageHandler{
 		Api: make(map[uint32]zinterface.IRouter),
 		//开辟等待队列
-		TaskQueue: make([]chan zinterface.IRequest, utils.Globa.MaxPoolWorker),
+		TaskQueue: make([]chan zinterface.IRequest, utils.Globa.MaxPoolSize),
 		//允许开辟的线程池最多的work数量
 		WorkPoolSize: utils.Globa.MaxPoolSize,
 	}
@@ -57,7 +57,7 @@ func (mh *MessageHandler) StartWorkPool() {
 	for i := 0; i < int(mh.WorkPoolSize); i++ {
 		//work依次启动
 		//分配对应的队列空间到pool中worker、每个pool中的work独享一个队列、避免考虑共享加锁、解锁问题
-		mh.TaskQueue[i] = make(chan zinterface.IRequest, utils.Globa.MaxPoolSize)
+		mh.TaskQueue[i] = make(chan zinterface.IRequest, utils.Globa.MaxPoolWorker)
 		//启动、堵塞等待
 		go mh.StarOnetWork(i, mh.TaskQueue[i])
 	}
@@ -65,9 +65,9 @@ func (mh *MessageHandler) StartWorkPool() {
 
 // 调动一个work携程
 func (mh *MessageHandler) StarOnetWork(WorkID int, req chan zinterface.IRequest) {
+	fmt.Println("req chan starting, Work ID == ", WorkID)
 	for {
 		r := <-req
-		fmt.Println("req chan starting, Work ID == ", WorkID)
 		mh.DoMsgHandler(r)
 	}
 }
