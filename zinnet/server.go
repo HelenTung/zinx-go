@@ -20,6 +20,8 @@ type Server struct {
 	Port int
 	//server 的消息管理模块
 	MsgHandler zinterface.IMsgHandler
+	//connection manger
+	ConnMgr zinterface.IConnManger
 }
 
 // 定义计数器
@@ -33,6 +35,7 @@ func NewServer() zinterface.IServer {
 		IP:         utils.Globa.Host,
 		Port:       utils.Globa.TcpPort,
 		MsgHandler: NewMessageHandler(),
+		ConnMgr:    NewConnManger(),
 	}
 	return s
 }
@@ -63,6 +66,7 @@ func (s *Server) Start() {
 		fmt.Println("start zinx server success,", s.Name, "success,listenning...")
 
 		cnt = 0
+
 		//阻塞等待client连接、处理客户端业务（读写）
 		for {
 			//堵塞，等待客户端链接、如果客户端有链接、则堵塞返回
@@ -72,8 +76,15 @@ func (s *Server) Start() {
 				continue
 			}
 
+			//在进行业务绑定之前判断最大链接数是否超标
+			if s.ConnMgr.GetConnNum() > utils.Globa.MaxConn {
+				TCPconn.Close()
+				//TODO:给Client抛出链接数超标错误
+				continue
+			}
+
 			//将处理新链接的方法与conn进行绑定、得到新的conn模块
-			conn := NewConn(TCPconn, cnt, s.MsgHandler)
+			conn := NewConn(s, TCPconn, cnt, s.MsgHandler)
 			//计数器+1
 			cnt++
 			go conn.Start()
@@ -85,6 +96,8 @@ func (s *Server) Start() {
 // 停止
 func (s *Server) Stop() {
 	//TODO:将服务器的资源、状态、与链接信息进行停止与回收释放
+	fmt.Println("[STOP] [Zinx] server name ", s.Name)
+	s.ConnMgr.ClearConn()
 }
 
 // 运行
@@ -102,4 +115,8 @@ func (s *Server) Serve() {
 func (s *Server) AddRouter(msgID uint32, router zinterface.IRouter) {
 	s.MsgHandler.AddRouter(msgID, router)
 	fmt.Println("Add router to conn success!")
+}
+
+func (s *Server) GetConnMgr() zinterface.IConnManger {
+	return s.ConnMgr
 }

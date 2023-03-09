@@ -12,20 +12,24 @@ import (
 
 // 定义链接的结构
 type Connection struct {
+	//conn 属于 Server
+	ConnServer zinterface.IServer
+
 	//socket 套接字
 	conn *net.TCPConn
+
 	//conn 的 ID
 	ConnID uint32
+
 	//链接状态
 	IsCloesd bool
-	// //当前链接绑定业务处理方法
-	// handleAPI zinterface.HandleFunc
+
 	//告知当前链接状态的channel、reader --> writer
 	ExitChan chan bool
-	// //router的进行处理conn的方法
-	// router zinterface.IRouter
+
 	//无缓冲channel、用在writer reader发送信息
 	MessChan chan []byte
+
 	//消息管理模块
 	MessageHandler zinterface.IMsgHandler
 }
@@ -121,6 +125,9 @@ func (c *Connection) Stop() {
 	c.conn.Close()
 	//告知writer exitchan关闭
 	c.ExitChan <- true
+
+	//删除当前链接
+	c.ConnServer.GetConnMgr().DeleteConn(c)
 	//关闭channel、回收资源
 	close(c.ExitChan)
 	close(c.MessChan)
@@ -160,15 +167,17 @@ func (c *Connection) Send(msgId uint32, data []byte) error {
 }
 
 // 实例化对象conn、初始化模块的方法,向外暴露接口
-func NewConn(conn *net.TCPConn, connId uint32, mh zinterface.IMsgHandler) zinterface.Iconn {
+func NewConn(s zinterface.IServer, conn *net.TCPConn, connId uint32, mh zinterface.IMsgHandler) zinterface.Iconn {
 	c := &Connection{
-		conn:   conn,
-		ConnID: connId,
+		ConnServer: s,
+		conn:       conn,
+		ConnID:     connId,
 		// handleAPI: api,
 		IsCloesd:       false,
 		ExitChan:       make(chan bool, 1),
 		MessChan:       make(chan []byte),
 		MessageHandler: mh,
 	}
+	c.ConnServer.GetConnMgr().AddteConn(c)
 	return c
 }
