@@ -27,6 +27,10 @@ type GlobaObj struct {
 	MaxConn int
 	//数据包的最大值
 	MaxPackageSize uint32
+	//在work池中开辟的携程最大值
+	MaxPoolSize uint32
+	//Worker最大值
+	MaxPoolWorker uint32
 }
 
 var Globa *GlobaObj
@@ -51,6 +55,8 @@ func init() {
 		Host:           "0.0.0.0",
 		MaxConn:        1000,
 		MaxPackageSize: 4096,
+		MaxPoolSize:    10,
+		MaxPoolWorker:  1024,
 	}
 	Globa.ReadZinxJson()
 }

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/helenvivi/zinx/utils"
 	"github.com/helenvivi/zinx/zinterface"
 )
 
@@ -66,7 +67,14 @@ func (c *Connection) StartRead() {
 			}
 		}
 		//执行注册的路由方法
-		go c.MessageHandler.DoMsgHandler(NewRequest(c, msg))
+		//go c.MessageHandler.DoMsgHandler(NewRequest(c, msg))
+		if utils.Globa.MaxPoolSize > 0 {
+			//开辟pool
+			c.MessageHandler.SendMsgTaskQueue(NewRequest(c, msg))
+		} else {
+			//不开辟pool
+			go c.MessageHandler.DoMsgHandler(NewRequest(c, msg))
+		}
 	}
 }
 

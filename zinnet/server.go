@@ -18,26 +18,12 @@ type Server struct {
 	IP string
 	//port 监听的端口
 	Port int
-	// //路由功能、server注册的conn
-	// router     zinterface.IRouter
 	//server 的消息管理模块
 	MsgHandler zinterface.IMsgHandler
 }
 
 // 定义计数器
 var cnt uint32
-
-// // conn 需要的操作函数、定义为当前客户端发起conn的绑定函数
-// func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
-// 	//回显业务
-// 	fmt.Println("[Conn Handle] CallBackClient...")
-// 	_, err := conn.Write(data)
-// 	if err != nil {
-// 		fmt.Println("write back data err", err)
-// 		return errors.New("CallBackClient error")
-// 	}
-// 	return nil
-// }
 
 // 初始化Server对象
 func NewServer() zinterface.IServer {
@@ -59,6 +45,9 @@ func (s *Server) Start() {
 		utils.Globa.Version, utils.Globa.MaxConn, utils.Globa.MaxPackageSize)
 	//放到携程处理、避免因为读取数据堵塞
 	go func() {
+		//开启消息队列以及工作池子
+		s.MsgHandler.StartWorkPool()
+
 		//获取tcp addr
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
 		if err != nil {
@@ -83,26 +72,6 @@ func (s *Server) Start() {
 				continue
 			}
 
-			// // 与client已经建立连接、进行业务处理、处理512byte的回显业务
-
-			// go func() {
-			// 	for {
-			// 		//read
-			// 		buff := make([]byte, 512)
-			// 		//堵塞、等待数据到达
-			// 		cnt, err := TCPconn.Read(buff)
-			// 		if err != nil {
-			// 			fmt.Println("TCPconn.Read error :", err)
-			// 			continue
-			// 		}
-			// 		//write、回显业务
-			// 		if _, err := TCPconn.Write(buff[:cnt]); err != nil {
-			// 			fmt.Println("write back buff err : ", err)
-			// 			continue
-			// 		}
-
-			// 	}
-			// }()
 			//将处理新链接的方法与conn进行绑定、得到新的conn模块
 			conn := NewConn(TCPconn, cnt, s.MsgHandler)
 			//计数器+1

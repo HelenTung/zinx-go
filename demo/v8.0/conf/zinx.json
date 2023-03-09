@@ -1,0 +1,11 @@
+{
+  "TcpServer": null,
+  "Name": "zinx v8.0",
+  "Host": "127.0.0.1",
+  "TcpPort": 7070,
+  "Version": "v8.0",
+  "MaxConn": 10,
+  "MaxPackageSize": 4096,
+  "MaxPoolSize": 10,
+  "MaxPoolWorker": 1024
+}

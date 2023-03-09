@@ -6,4 +6,8 @@ type IMsgHandler interface {
 	DoMsgHandler(r IRequest)
 	//给路由添加具体的处理逻辑
 	AddRouter(msgID uint32, router IRouter)
+	//开辟任务处理pool
+	StartWorkPool()
+	// 将消息发送到队列中
+	SendMsgTaskQueue(req IRequest)
 }
