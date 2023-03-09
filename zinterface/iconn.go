@@ -17,6 +17,12 @@ type Iconn interface {
 	RemoteAddr() net.Addr
 	//发送数据
 	Send(msgId uint32, data []byte) error
+	//设置连接属性
+	SetProperty(key string, value interface{})
+	//Get 属性
+	GetProperty(key string) (interface{}, error)
+	//移除连接属性
+	RemoveProperty(key string)
 }
 
 //// 处理链接业务的方法

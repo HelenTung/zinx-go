@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 
 	"github.com/helenvivi/zinx/utils"
 	"github.com/helenvivi/zinx/zinterface"
@@ -32,6 +33,12 @@ type Connection struct {
 
 	//消息管理模块
 	MessageHandler zinterface.IMsgHandler
+
+	//连接属性集合
+	property map[string]interface{}
+
+	//给链接属性加锁
+	propertyLock sync.RWMutex
 }
 
 // read模块
@@ -188,4 +195,33 @@ func NewConn(s zinterface.IServer, conn *net.TCPConn, connId uint32, mh zinterfa
 	}
 	c.ConnServer.GetConnMgr().AddteConn(c)
 	return c
+}
+
+// 设置连接属性
+func (c *Connection) SetProperty(key string, value interface{}) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+
+	c.property[key] = value
+}
+
+// Get 属性
+func (c *Connection) GetProperty(key string) (interface{}, error) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+
+	v, ok := c.property[key]
+	if !ok {
+		fmt.Println("Not Fount property[key]")
+		return nil, errors.New("this key Not in conn")
+	}
+	return v, nil
+}
+
+// 移除连接属性
+func (c *Connection) RemoveProperty(key string) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+
+	delete(c.property, key)
 }
